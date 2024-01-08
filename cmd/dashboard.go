@@ -5,6 +5,9 @@ package cmd
 
 import (
 	"errors"
+	"net/url"
+	"time"
+
 	"github.com/daveshanley/vacuum/cui"
 	"github.com/daveshanley/vacuum/model"
 	"github.com/daveshanley/vacuum/motor"
@@ -14,13 +17,12 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-	"net/url"
-	"time"
 )
 
+// GetDashboardCommand gets the cobra.Command instance for the dashboard command.
 func GetDashboardCommand() *cobra.Command {
 
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:     "dashboard",
 		Short:   "Show vacuum dashboard for linting report",
 		Long:    "Interactive console dashboard to explore linting report in detail",
@@ -44,6 +46,7 @@ func GetDashboardCommand() *cobra.Command {
 			skipCheckFlag, _ := cmd.Flags().GetBool("skip-check")
 			timeoutFlag, _ := cmd.Flags().GetInt("timeout")
 			hardModeFlag, _ := cmd.Flags().GetBool("hard-mode")
+			//followFlag, _ := cmd.Flags().GetBool("follow")
 
 			var err error
 			vacuumReport, specBytes, _ := vacuum_report.BuildVacuumReportFromFile(args[0])
@@ -112,4 +115,8 @@ func GetDashboardCommand() *cobra.Command {
 			return dash.Render()
 		},
 	}
+
+	cmd.Flags().BoolP("follow", "F", false, "Follow any changes to the OpenAPI spec.")
+
+	return cmd
 }
