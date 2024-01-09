@@ -2,10 +2,11 @@ package cmd
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGenerateRulesetCommand(t *testing.T) {

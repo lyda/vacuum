@@ -1,22 +1,25 @@
+// Package cmd implements the command line parsing.
+//
 // Copyright 2022 Dave Shanley / Quobix
 // SPDX-License-Identifier: MIT
-
 package cmd
 
 import (
 	"errors"
+	"os"
+	"time"
+
 	html_report "github.com/daveshanley/vacuum/html-report"
 	"github.com/daveshanley/vacuum/model"
 	"github.com/daveshanley/vacuum/model/reports"
 	"github.com/daveshanley/vacuum/motor"
+	"github.com/daveshanley/vacuum/shared"
 	"github.com/daveshanley/vacuum/statistics"
 	vacuum_report "github.com/daveshanley/vacuum/vacuum-report"
 	"github.com/pb33f/libopenapi/datamodel"
 	"github.com/pb33f/libopenapi/index"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"os"
-	"time"
 )
 
 // GetHTMLReportCommand returns a cobra command for generating an HTML Report.
@@ -91,10 +94,10 @@ func GetHTMLReportCommand() *cobra.Command {
 			if vacuumReport == nil {
 
 				functionsFlag, _ := cmd.Flags().GetString("functions")
-				customFunctions, _ := LoadCustomFunctions(functionsFlag)
+				customFunctions, _ := shared.LoadCustomFunctions(functionsFlag)
 
 				rulesetFlag, _ := cmd.Flags().GetString("ruleset")
-				resultSet, ruleset, err = BuildResultsWithDocCheckSkip(false, hardModeFlag, rulesetFlag, specBytes, customFunctions,
+				resultSet, ruleset, err = shared.BuildResultsWithDocCheckSkip(false, hardModeFlag, rulesetFlag, specBytes, customFunctions,
 					baseFlag, skipCheckFlag, time.Duration(timeoutFlag)*time.Second)
 				if err != nil {
 					pterm.Error.Printf("Failed to generate report: %v\n\n", err)
@@ -134,7 +137,7 @@ func GetHTMLReportCommand() *cobra.Command {
 			pterm.Println()
 
 			fi, _ := os.Stat(args[0])
-			RenderTime(timeFlag, duration, fi.Size())
+			shared.RenderTime(timeFlag, duration, fi.Size())
 
 			return nil
 		},

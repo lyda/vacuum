@@ -6,12 +6,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"github.com/daveshanley/vacuum/model"
-	"github.com/daveshanley/vacuum/motor"
-	"github.com/daveshanley/vacuum/rulesets"
-	"github.com/dustin/go-humanize"
-	"github.com/pterm/pterm"
-	"github.com/spf13/cobra"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -19,6 +13,14 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/daveshanley/vacuum/model"
+	"github.com/daveshanley/vacuum/motor"
+	"github.com/daveshanley/vacuum/rulesets"
+	"github.com/daveshanley/vacuum/shared"
+	"github.com/dustin/go-humanize"
+	"github.com/pterm/pterm"
+	"github.com/spf13/cobra"
 )
 
 func GetLintCommand() *cobra.Command {
@@ -103,7 +105,7 @@ func GetLintCommand() *cobra.Command {
 
 			defaultRuleSets := rulesets.BuildDefaultRuleSetsWithLogger(logger)
 			selectedRS := defaultRuleSets.GenerateOpenAPIRecommendedRuleSet()
-			customFunctions, _ := LoadCustomFunctions(functionsFlag)
+			customFunctions, _ := shared.LoadCustomFunctions(functionsFlag)
 
 			// HARD MODE
 			if hardModeFlag {
@@ -134,7 +136,7 @@ func GetLintCommand() *cobra.Command {
 					return rsErr
 				}
 
-				selectedRS, rsErr = BuildRuleSetFromUserSuppliedSet(rsBytes, defaultRuleSets)
+				selectedRS, rsErr = shared.BuildRuleSetFromUserSuppliedSet(rsBytes, defaultRuleSets)
 				if rsErr != nil {
 					return rsErr
 				}
@@ -223,7 +225,7 @@ func GetLintCommand() *cobra.Command {
 
 			duration := time.Since(start)
 
-			RenderTimeAndFiles(timeFlag, duration, filesProcessedSize, filesProcessed)
+			shared.RenderTimeAndFiles(timeFlag, duration, filesProcessedSize, filesProcessed)
 
 			if len(errs) > 0 {
 				return errors.Join(errs...)
@@ -341,7 +343,7 @@ func lintFile(req lintFileRequest) (int64, int, error) {
 	defer req.lock.Unlock()
 	if !req.detailsFlag {
 		RenderSummary(resultSet, req.silent, req.totalFiles, req.fileIndex, req.fileName, req.failSeverityFlag)
-		return result.FileSize, result.FilesProcessed, CheckFailureSeverity(req.failSeverityFlag, errs, warnings, informs)
+		return result.FileSize, result.FilesProcessed, shared.CheckFailureSeverity(req.failSeverityFlag, errs, warnings, informs)
 	}
 
 	abs, _ := filepath.Abs(req.fileName)
@@ -361,7 +363,7 @@ func lintFile(req lintFileRequest) (int64, int, error) {
 
 	RenderSummary(resultSet, req.silent, req.totalFiles, req.fileIndex, req.fileName, req.failSeverityFlag)
 
-	return result.FileSize, result.FilesProcessed, CheckFailureSeverity(req.failSeverityFlag, errs, warnings, informs)
+	return result.FileSize, result.FilesProcessed, shared.CheckFailureSeverity(req.failSeverityFlag, errs, warnings, informs)
 }
 
 func processResults(results []*model.RuleFunctionResult,

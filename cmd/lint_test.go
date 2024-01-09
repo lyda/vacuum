@@ -3,11 +3,12 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"github.com/daveshanley/vacuum/model"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"os"
 	"testing"
+
+	"github.com/daveshanley/vacuum/model"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetLintCommand(t *testing.T) {

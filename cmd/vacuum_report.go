@@ -9,15 +9,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/daveshanley/vacuum/model"
 	"github.com/daveshanley/vacuum/motor"
 	"github.com/daveshanley/vacuum/rulesets"
+	"github.com/daveshanley/vacuum/shared"
 	"github.com/daveshanley/vacuum/statistics"
 	vacuum_report "github.com/daveshanley/vacuum/vacuum-report"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"os"
-	"time"
 )
 
 func GetVacuumReportCommand() *cobra.Command {
@@ -134,7 +136,7 @@ func GetVacuumReportCommand() *cobra.Command {
 			// and see if it's valid. If so - let's go!
 			if rulesetFlag != "" {
 
-				customFunctions, _ = LoadCustomFunctions(functionsFlag)
+				customFunctions, _ = shared.LoadCustomFunctions(functionsFlag)
 
 				rsBytes, rsErr := os.ReadFile(rulesetFlag)
 				if rsErr != nil {
@@ -142,7 +144,7 @@ func GetVacuumReportCommand() *cobra.Command {
 					pterm.Println()
 					return rsErr
 				}
-				selectedRS, rsErr = BuildRuleSetFromUserSuppliedSet(rsBytes, defaultRuleSets)
+				selectedRS, rsErr = shared.BuildRuleSetFromUserSuppliedSet(rsBytes, defaultRuleSets)
 				if rsErr != nil {
 					return rsErr
 				}
@@ -251,7 +253,7 @@ func GetVacuumReportCommand() *cobra.Command {
 			pterm.Println()
 
 			fi, _ := os.Stat(args[0])
-			RenderTime(timeFlag, duration, fi.Size())
+			shared.RenderTime(timeFlag, duration, fi.Size())
 
 			return nil
 		},

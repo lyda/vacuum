@@ -1,14 +1,16 @@
-package cmd
+package shared
 
 import (
+	"os"
+	"time"
+
 	"github.com/daveshanley/vacuum/model"
 	"github.com/daveshanley/vacuum/motor"
 	"github.com/daveshanley/vacuum/rulesets"
 	"github.com/pterm/pterm"
-	"os"
-	"time"
 )
 
+// BuildResults get results with no skip checks.
 func BuildResults(
 	silent bool,
 	hardMode bool,
@@ -20,6 +22,7 @@ func BuildResults(
 	return BuildResultsWithDocCheckSkip(silent, hardMode, rulesetFlag, specBytes, customFunctions, base, false, timeout)
 }
 
+// BuildResultsWithDocCheckSkip get results with configurable skip checks.
 func BuildResultsWithDocCheckSkip(
 	silent bool,
 	hardMode bool,

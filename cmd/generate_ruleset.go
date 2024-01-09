@@ -7,11 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+
 	"github.com/daveshanley/vacuum/rulesets"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-	"os"
 )
 
 func GetGenerateRulesetCommand() *cobra.Command {

@@ -1,8 +1,9 @@
-package cmd
+package shared
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBuildResults(t *testing.T) {

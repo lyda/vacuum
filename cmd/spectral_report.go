@@ -8,13 +8,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/daveshanley/vacuum/model"
 	"github.com/daveshanley/vacuum/motor"
 	"github.com/daveshanley/vacuum/rulesets"
+	"github.com/daveshanley/vacuum/shared"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"os"
-	"time"
 )
 
 func GetSpectralReportCommand() *cobra.Command {
@@ -133,14 +135,14 @@ func GetSpectralReportCommand() *cobra.Command {
 			// and see if it's valid. If so - let's go!
 			if rulesetFlag != "" {
 
-				customFunctions, _ = LoadCustomFunctions(functionsFlag)
+				customFunctions, _ = shared.LoadCustomFunctions(functionsFlag)
 				rsBytes, rsErr := os.ReadFile(rulesetFlag)
 				if rsErr != nil {
 					pterm.Error.Printf("Unable to read ruleset file '%s': %s\n", rulesetFlag, rsErr.Error())
 					pterm.Println()
 					return rsErr
 				}
-				selectedRS, rsErr = BuildRuleSetFromUserSuppliedSet(rsBytes, defaultRuleSets)
+				selectedRS, rsErr = shared.BuildRuleSetFromUserSuppliedSet(rsBytes, defaultRuleSets)
 				if rsErr != nil {
 					return rsErr
 				}
@@ -198,7 +200,7 @@ func GetSpectralReportCommand() *cobra.Command {
 			pterm.Println()
 
 			fi, _ := os.Stat(args[0])
-			RenderTime(timeFlag, duration, fi.Size())
+			shared.RenderTime(timeFlag, duration, fi.Size())
 
 			return nil
 		},
