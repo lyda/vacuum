@@ -2,11 +2,12 @@ package cui
 
 import (
 	"fmt"
+	"sort"
+	"strings"
+
 	"github.com/daveshanley/vacuum/model"
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
-	"sort"
-	"strings"
 )
 
 // TabbedView represents a tabbed view holding various data views
@@ -111,7 +112,7 @@ func (t *TabbedView) generateRulesInCategory() {
 	if t.dashboard == nil {
 		return
 	}
-	results := t.dashboard.resultSet.GetRuleResultsForCategory(t.dashboard.selectedCategory.Id)
+	results := t.dashboard.file.resultSet.GetRuleResultsForCategory(t.dashboard.selectedCategory.Id)
 	t.currentRuleResults = results
 	var rows []string
 	// sort results
@@ -241,7 +242,7 @@ func (t *TabbedView) generateRuleViolationView() {
 	}
 
 	if t.violationCodeSnippet == nil {
-		specStringData := strings.Split(string(*t.dashboard.info.SpecBytes), "\n")
+		specStringData := strings.Split(string(*t.dashboard.file.specInfo.SpecBytes), "\n")
 
 		snippet := NewSnippet()
 		if t.dashboard.violationViewActive {
@@ -263,7 +264,7 @@ func (t *TabbedView) generateRuleViolationView() {
 		if t.dashboard.selectedViolation == nil {
 			t.violationCodeSnippet.Text = ""
 		} else {
-			specStringData := strings.Split(string(*t.dashboard.info.SpecBytes), "\n")
+			specStringData := strings.Split(string(*t.dashboard.file.specInfo.SpecBytes), "\n")
 
 			if t.dashboard.violationViewActive {
 				t.violationCodeSnippet.Text = generateConsoleSnippet(t.dashboard.selectedViolation, specStringData,

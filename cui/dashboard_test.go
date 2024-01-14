@@ -4,6 +4,10 @@
 package cui
 
 import (
+	"os"
+	"testing"
+	"time"
+
 	"github.com/daveshanley/vacuum/model"
 	"github.com/daveshanley/vacuum/motor"
 	"github.com/daveshanley/vacuum/rulesets"
@@ -12,15 +16,12 @@ import (
 	"github.com/pb33f/libopenapi/index"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
-	"os"
-	"testing"
-	"time"
 )
 
 func TestCreateDashboard(t *testing.T) {
 	resultSet, idx, info := testBootDashboard()
 	dash := CreateDashboard(resultSet, idx, info)
-	assert.Equal(t, "openapi", dash.info.SpecType)
+	assert.Equal(t, "openapi", dash.specInfo.SpecType)
 }
 
 func TestDashboard_GenerateTabbedView(t *testing.T) {

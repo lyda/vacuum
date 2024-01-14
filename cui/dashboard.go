@@ -1,12 +1,12 @@
+// Package cui implements the console UI.
 package cui
 
 import (
 	"fmt"
+
 	"github.com/daveshanley/vacuum/model"
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
-	"github.com/pb33f/libopenapi/datamodel"
-	"github.com/pb33f/libopenapi/index"
 )
 
 // Dashboard represents the dashboard controlling container
@@ -19,9 +19,6 @@ type Dashboard struct {
 	tabs                   TabbedView
 	healthGaugeItems       []ui.GridItem
 	categoryHealthGauge    []CategoryGauge
-	resultSet              *model.RuleResultSet
-	index                  *index.SpecIndex
-	info                   *datamodel.SpecInfo
 	selectedTabIndex       int
 	ruleCategories         []*model.RuleCategory
 	selectedCategory       *model.RuleCategory
@@ -32,15 +29,15 @@ type Dashboard struct {
 	violationViewActive    bool
 	helpViewActive         bool
 	uiEvents               <-chan ui.Event
+	file                   *File
 	Version                string
 }
 
-func CreateDashboard(resultSet *model.RuleResultSet, index *index.SpecIndex, info *datamodel.SpecInfo) *Dashboard {
-	db := new(Dashboard)
-	db.resultSet = resultSet
-	db.index = index
-	db.info = info
-	return db
+// CreateDashboard creates the dashboard.
+func CreateDashboard(file *File) *Dashboard {
+	dash := new(Dashboard)
+	dash.file = file
+	return dash
 }
 
 // GenerateTabbedView generates tabs
@@ -96,9 +93,9 @@ func (dash *Dashboard) Render() error {
 	cats := model.RuleCategoriesOrdered
 
 	var catsFiltered []*model.RuleCategory
-	if dash.resultSet != nil {
+	if dash.file.resultSet != nil {
 		for i := range cats {
-			res := dash.resultSet.GetResultsByRuleCategory(cats[i].Id)
+			res := dash.file.resultSet.GetResultsByRuleCategory(cats[i].Id)
 			if len(res) >= 1 {
 				catsFiltered = append(catsFiltered, cats[i])
 			}
@@ -106,7 +103,7 @@ func (dash *Dashboard) Render() error {
 	}
 
 	for _, cat := range catsFiltered {
-		score := dash.resultSet.CalculateCategoryHealth(cat.Id)
+		score := dash.file.resultSet.CalculateCategoryHealth(cat.Id)
 		gauges = append(gauges, NewCategoryGauge(cat.Name, score, cat))
 	}
 
@@ -144,54 +141,58 @@ func (dash *Dashboard) eventLoop(cats []*model.RuleCategory) {
 	}
 	// TODO: clean this damn mess up.
 	for {
-		e := <-uiEvents
-		switch e.ID {
-		case "q", "<C-c>":
-			return
-		case "h":
-			dash.helpViewActive = true
-		case "<Tab>":
-			dash.violationViewActive = false
-			if dash.tabs.tv.ActiveTabIndex == len(cats)-1 { // loop around and around.
-				dash.tabs.tv.ActiveTabIndex = 0
-			} else {
+		select {
+		case e := <-dash.file.watcher.Events:
+			fmt.Printf("event: %v\n", e)
+		case e := <-uiEvents:
+			switch e.ID {
+			case "q", "<C-c>":
+				return
+			case "h":
+				dash.helpViewActive = true
+			case "<Tab>":
+				dash.violationViewActive = false
+				if dash.tabs.tv.ActiveTabIndex == len(cats)-1 { // loop around and around.
+					dash.tabs.tv.ActiveTabIndex = 0
+				} else {
+					dash.tabs.tv.FocusRight()
+				}
+				dash.tabs.setActiveCategoryIndex(dash.tabs.tv.ActiveTabIndex)
+				dash.generateViewsAfterEvent()
+
+			case "<Enter>":
+				dash.violationViewActive = true
+				dash.generateViewsAfterEvent()
+
+			case "<Escape>":
+				dash.violationViewActive = false
+				dash.helpViewActive = false
+				dash.generateViewsAfterEvent()
+
+			case "x", "<Right>":
+				dash.violationViewActive = false
 				dash.tabs.tv.FocusRight()
-			}
-			dash.tabs.setActiveCategoryIndex(dash.tabs.tv.ActiveTabIndex)
-			dash.generateViewsAfterEvent()
+				dash.tabs.setActiveCategoryIndex(dash.tabs.tv.ActiveTabIndex)
+				dash.generateViewsAfterEvent()
 
-		case "<Enter>":
-			dash.violationViewActive = true
-			dash.generateViewsAfterEvent()
+			case "s", "<Left>":
+				dash.violationViewActive = false
+				dash.tabs.tv.FocusLeft()
+				dash.tabs.setActiveCategoryIndex(dash.tabs.tv.ActiveTabIndex)
+				dash.generateViewsAfterEvent()
 
-		case "<Escape>":
-			dash.violationViewActive = false
-			dash.helpViewActive = false
-			dash.generateViewsAfterEvent()
-
-		case "x", "<Right>":
-			dash.violationViewActive = false
-			dash.tabs.tv.FocusRight()
-			dash.tabs.setActiveCategoryIndex(dash.tabs.tv.ActiveTabIndex)
-			dash.generateViewsAfterEvent()
-
-		case "s", "<Left>":
-			dash.violationViewActive = false
-			dash.tabs.tv.FocusLeft()
-			dash.tabs.setActiveCategoryIndex(dash.tabs.tv.ActiveTabIndex)
-			dash.generateViewsAfterEvent()
-
-		case "z", "<Down>":
-			if dash.violationViewActive {
-				dash.tabs.scrollViolationsDown()
-			} else {
-				dash.tabs.scrollRulesDown()
-			}
-		case "a", "<Up>":
-			if dash.violationViewActive {
-				dash.tabs.scrollViolationsUp()
-			} else {
-				dash.tabs.scrollRulesUp()
+			case "z", "<Down>":
+				if dash.violationViewActive {
+					dash.tabs.scrollViolationsDown()
+				} else {
+					dash.tabs.scrollRulesDown()
+				}
+			case "a", "<Up>":
+				if dash.violationViewActive {
+					dash.tabs.scrollViolationsUp()
+				} else {
+					dash.tabs.scrollRulesUp()
+				}
 			}
 		}
 		ui.Clear()
@@ -239,7 +240,7 @@ func (dash *Dashboard) setGrid() {
 					//	dash.healthGaugeItems[0], dash.healthGaugeItems[1], dash.healthGaugeItems[2], dash.healthGaugeItems[3],
 					//	dash.healthGaugeItems[4], dash.healthGaugeItems[5], dash.healthGaugeItems[6], dash.healthGaugeItems[7],
 					//	//dash.healthGaugeItems[8],
-					//	ui.NewRow(0.3, NewStatsChart(dash.index, dash.info).bc),
+					//	ui.NewRow(0.3, NewStatsChart(dash.file.specIndex, dash.file.specInfo).bc),
 					//),
 					//ui.NewCol(0.01, nil),
 					ui.NewCol(1.0,

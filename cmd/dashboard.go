@@ -1,22 +1,16 @@
+// Package cmd implements the command line parsing.
+//
 // Copyright 2020-2022 Dave Shanley / Quobix
 // SPDX-License-Identifier: MIT
-
 package cmd
 
 import (
 	"errors"
-	"net/url"
-	"time"
 
 	"github.com/daveshanley/vacuum/cui"
-	"github.com/daveshanley/vacuum/model"
-	"github.com/daveshanley/vacuum/motor"
-	vacuum_report "github.com/daveshanley/vacuum/vacuum-report"
-	"github.com/pb33f/libopenapi/datamodel"
-	"github.com/pb33f/libopenapi/index"
+	"github.com/daveshanley/vacuum/shared"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 // GetDashboardCommand gets the cobra.Command instance for the dashboard command.
@@ -46,71 +40,25 @@ func GetDashboardCommand() *cobra.Command {
 			skipCheckFlag, _ := cmd.Flags().GetBool("skip-check")
 			timeoutFlag, _ := cmd.Flags().GetInt("timeout")
 			hardModeFlag, _ := cmd.Flags().GetBool("hard-mode")
-			//followFlag, _ := cmd.Flags().GetBool("follow")
+			followFlag, _ := cmd.Flags().GetBool("follow")
+			functionsFlag, _ := cmd.Flags().GetString("functions")
+			rulesetFlag, _ := cmd.Flags().GetString("ruleset")
+			customFunctions, _ := shared.LoadCustomFunctions(functionsFlag)
 
-			var err error
-			vacuumReport, specBytes, _ := vacuum_report.BuildVacuumReportFromFile(args[0])
-			if len(specBytes) <= 0 {
-				pterm.Error.Printf("Failed to read specification: %v\n\n", args[0])
-				return err
-			}
+			openapiFile, err := cui.NewFile(
+				args[0],
+				baseFlag,
+				skipCheckFlag,
+				timeoutFlag,
+				hardModeFlag,
+				followFlag,
+				customFunctions,
+				rulesetFlag,
+			)
+			cobra.CheckErr(err)
+			cobra.CheckErr(openapiFile.ReadFile())
 
-			var resultSet *model.RuleResultSet
-			var ruleset *motor.RuleSetExecutionResult
-			var specIndex *index.SpecIndex
-			var specInfo *datamodel.SpecInfo
-
-			// if we have a pre-compiled report, jump straight to the end and collect $500
-			if vacuumReport == nil {
-
-				functionsFlag, _ := cmd.Flags().GetString("functions")
-				customFunctions, _ := LoadCustomFunctions(functionsFlag)
-
-				rulesetFlag, _ := cmd.Flags().GetString("ruleset")
-				resultSet, ruleset, err = BuildResultsWithDocCheckSkip(false, hardModeFlag, rulesetFlag, specBytes, customFunctions,
-					baseFlag, skipCheckFlag, time.Duration(timeoutFlag)*time.Second)
-				if err != nil {
-					pterm.Error.Printf("Failed to render dashboard: %v\n\n", err)
-					return err
-				}
-				specIndex = ruleset.Index
-				specInfo = ruleset.SpecInfo
-				specInfo.Generated = time.Now()
-
-			} else {
-
-				resultSet = model.NewRuleResultSetPointer(vacuumReport.ResultSet.Results)
-
-				// TODO: refactor dashboard to hold state and rendering as separate entities.
-				// dashboard will be slower because it needs an index
-				var rootNode yaml.Node
-				err = yaml.Unmarshal(*vacuumReport.SpecInfo.SpecBytes, &rootNode)
-				if err != nil {
-					pterm.Error.Printf("Unable to read spec bytes from report file '%s': %s\n", args[0], err.Error())
-					pterm.Println()
-					return err
-				}
-
-				config := index.CreateClosedAPIIndexConfig()
-				if baseFlag != "" {
-					u, e := url.Parse(baseFlag)
-					if e == nil && u.Scheme != "" && u.Host != "" {
-						config.BaseURL = u
-						config.BasePath = ""
-					} else {
-						config.BasePath = baseFlag
-					}
-					config.AllowFileLookup = true
-					config.AllowRemoteLookup = true
-				}
-
-				specIndex = index.NewSpecIndexWithConfig(&rootNode, config)
-
-				specInfo = vacuumReport.SpecInfo
-				specInfo.Generated = vacuumReport.Generated
-			}
-
-			dash := cui.CreateDashboard(resultSet, specIndex, specInfo)
+			dash := cui.CreateDashboard(openapiFile)
 			dash.Version = Version
 			return dash.Render()
 		},
