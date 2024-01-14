@@ -77,18 +77,16 @@ func (dash *Dashboard) ComposeGauges() {
 	dash.healthGaugeItems = gridItems
 }
 
-// Render will render the dashboard.
-func (dash *Dashboard) Render() error {
+func (dash *Dashboard) renderUI() ([]*model.RuleCategory, error) {
 
 	if err := ui.Init(); err != nil {
-		return err
+		return nil, err
 	}
 
 	dash.run = true
-	defer ui.Close()
+	//defer ui.Close()
 
 	// extract categories and calculate coverage.
-
 	var gauges []CategoryGauge
 	cats := model.RuleCategoriesOrdered
 
@@ -127,11 +125,21 @@ func (dash *Dashboard) Render() error {
 	//dash.tabs.setActiveCategoryIndex(dash.tabs.tv.ActiveTabIndex)
 
 	ui.Render(dash.grid, dash.title)
-	dash.eventLoop(cats)
-	return nil
+	return cats, nil
 }
 
-func (dash *Dashboard) eventLoop(cats []*model.RuleCategory) {
+// Render will render the dashboard.
+func (dash *Dashboard) Render() error {
+	cats, err := dash.renderUI()
+	if err != nil {
+		return err
+	}
+	defer ui.Close()
+	err = dash.eventLoop(cats)
+	return err
+}
+
+func (dash *Dashboard) eventLoop(cats []*model.RuleCategory) error {
 	var uiEvents <-chan ui.Event
 	if dash.uiEvents == nil {
 		uiEvents = ui.PollEvents()
@@ -139,15 +147,23 @@ func (dash *Dashboard) eventLoop(cats []*model.RuleCategory) {
 	} else {
 		uiEvents = dash.uiEvents
 	}
+
 	// TODO: clean this damn mess up.
 	for {
 		select {
-		case e := <-dash.file.watcher.Events:
-			fmt.Printf("event: %v\n", e)
+		case <-dash.file.watcher.Events:
+			err := dash.file.ReadFile()
+			if err != nil {
+				cats, err = dash.renderUI()
+				if err != nil {
+					return err
+				}
+				//fmt.Printf("event: %v\n", e)
+			}
 		case e := <-uiEvents:
 			switch e.ID {
 			case "q", "<C-c>":
-				return
+				return nil
 			case "h":
 				dash.helpViewActive = true
 			case "<Tab>":
